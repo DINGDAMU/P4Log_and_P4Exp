@@ -145,7 +145,7 @@ metadata custom_metadata_t custom_metadata;
 // TODO: Define the registers to store the counts
 register register{
     width : 64;
-    instance_count : 3;
+    instance_count : 4;
 }
 
 register E_register{
@@ -216,6 +216,7 @@ action do_expES(){
     modify_field(custom_metadata.exponent, 15);
 
     register_write(register, 1, custom_metadata.exponent);
+
     modify_field(custom_metadata.bEXP, custom_metadata.exponent * custom_metadata.log_value);
 
    modify_field(custom_metadata.exp_value, custom_metadata.bEXP>>10); 

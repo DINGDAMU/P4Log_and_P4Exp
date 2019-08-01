@@ -10,11 +10,11 @@ Installation
 2. Clone the repository to local 
 
     ```
-    git clone https://github.com/DINGDAMU/Network-wide-heavy-hitter-detection
+    git clone https://github.com/DINGDAMU/P4Log_and_P4Exp.git    
     ```
 
 3. ```
-    cd Network-wide-heavy-hitter-detection
+    cd P4Log_and_P4Exp
    ```
 
 4. If you want, put the `p4app` script somewhere in your path. For example:

@@ -4,6 +4,8 @@
 struct custom_metadata_t {
     bit<32> nhop_ipv4;
     bit<64> buc_sum;
+    bit<64> buc_sumR1;
+    bit<64> buc_sumR2;
     bit<32> log_value;
     bit<64> buc_val;
 }
@@ -142,20 +144,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         log_register.write((bit<32>)1, (bit<64>)meta.custom_metadata.log_value);
     }
     @netro("reglocked", "log_register;") @name(".do_read") action do_read() {
-        meta.custom_metadata.buc_sum = 64w127;
-        meta.custom_metadata.buc_val = meta.custom_metadata.buc_sum | meta.custom_metadata.buc_sum >> 1;
-        meta.custom_metadata.buc_val = meta.custom_metadata.buc_val | meta.custom_metadata.buc_val >> 2;
-        meta.custom_metadata.buc_val = meta.custom_metadata.buc_val | meta.custom_metadata.buc_val >> 4;
-        meta.custom_metadata.buc_val = meta.custom_metadata.buc_val | meta.custom_metadata.buc_val >> 8;
-        meta.custom_metadata.buc_val = meta.custom_metadata.buc_val | meta.custom_metadata.buc_val >> 16;
-        meta.custom_metadata.buc_val = meta.custom_metadata.buc_val | meta.custom_metadata.buc_val >> 32;
-        meta.custom_metadata.buc_val = (meta.custom_metadata.buc_val & 64w0x5555555555555555) + (meta.custom_metadata.buc_val >> 1 & 64w0x5555555555555555);
-        meta.custom_metadata.buc_val = (meta.custom_metadata.buc_val & 64w0x3333333333333333) + (meta.custom_metadata.buc_val >> 2 & 64w0x3333333333333333);
-        meta.custom_metadata.buc_val = (meta.custom_metadata.buc_val & 64w0xf0f0f0f0f0f0f0f) + (meta.custom_metadata.buc_val >> 4 & 64w0xf0f0f0f0f0f0f0f);
-        meta.custom_metadata.buc_val = (meta.custom_metadata.buc_val & 64w0xff00ff00ff00ff) + (meta.custom_metadata.buc_val >> 8 & 64w0xff00ff00ff00ff);
-        meta.custom_metadata.buc_val = (meta.custom_metadata.buc_val & 64w0xffff0000ffff) + (meta.custom_metadata.buc_val >> 16 & 64w0xffff0000ffff);
-        meta.custom_metadata.buc_val = (meta.custom_metadata.buc_val & 64w0xffffffff) + (meta.custom_metadata.buc_val >> 32 & 64w0xffffffff);
-        meta.custom_metadata.log_value = (bit<32>)(meta.custom_metadata.buc_val - 64w1 << 10);
+        meta.custom_metadata.buc_sum = 64w12;
+        meta.custom_metadata.buc_val = meta.custom_metadata.buc_sum | (meta.custom_metadata.buc_sum >> 1);
+        meta.custom_metadata.buc_val = meta.custom_metadata.buc_val | (meta.custom_metadata.buc_val >> 2);
+        meta.custom_metadata.buc_val = meta.custom_metadata.buc_val | (meta.custom_metadata.buc_val >> 4);
+        meta.custom_metadata.buc_val = meta.custom_metadata.buc_val | (meta.custom_metadata.buc_val >> 8);
+        meta.custom_metadata.buc_val = meta.custom_metadata.buc_val | (meta.custom_metadata.buc_val >> 16);
+        meta.custom_metadata.buc_val = meta.custom_metadata.buc_val | (meta.custom_metadata.buc_val >> 32);
+        meta.custom_metadata.buc_val = (meta.custom_metadata.buc_val & 64w0x5555555555555555) + ((meta.custom_metadata.buc_val >> 1) & 64w0x5555555555555555);
+        meta.custom_metadata.buc_val = (meta.custom_metadata.buc_val & 64w0x3333333333333333) + ((meta.custom_metadata.buc_val >> 2) & 64w0x3333333333333333);
+        meta.custom_metadata.buc_val = (meta.custom_metadata.buc_val & 64w0xf0f0f0f0f0f0f0f) + ((meta.custom_metadata.buc_val >> 4) & 64w0xf0f0f0f0f0f0f0f);
+        meta.custom_metadata.buc_val = (meta.custom_metadata.buc_val & 64w0xff00ff00ff00ff) + ((meta.custom_metadata.buc_val >> 8) & 64w0xff00ff00ff00ff);
+        meta.custom_metadata.buc_val = (meta.custom_metadata.buc_val & 64w0xffff0000ffff) + ((meta.custom_metadata.buc_val >> 16) & 64w0xffff0000ffff);
+        meta.custom_metadata.buc_val = (meta.custom_metadata.buc_val & 64w0xffffffff) + ((meta.custom_metadata.buc_val >> 32) & 64w0xffffffff);
+        meta.custom_metadata.log_value = (bit<32>)((meta.custom_metadata.buc_val - 64w1) << 10);
         log_register.write((bit<32>)0, (bit<64>)meta.custom_metadata.buc_sum);
         log_register.write((bit<32>)1, (bit<64>)meta.custom_metadata.log_value);
     }
@@ -192,17 +194,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     apply {
         ipv4_lpm.apply();
         read.apply();
-        if (meta.custom_metadata.buc_sum < meta.custom_metadata.buc_sum ^ meta.custom_metadata.buc_sum >> 1 && meta.custom_metadata.buc_sum > meta.custom_metadata.buc_sum ^ meta.custom_metadata.buc_sum >> 2) {
+        meta.custom_metadata.buc_sumR1 = meta.custom_metadata.buc_sum ^ (meta.custom_metadata.buc_sum >> 8w1);
+        meta.custom_metadata.buc_sumR2 = meta.custom_metadata.buc_sum ^ (meta.custom_metadata.buc_sum >> 8w2);
+
+        if (meta.custom_metadata.buc_sum < meta.custom_metadata.buc_sumR1 ){
+            if(meta.custom_metadata.buc_sum > meta.custom_metadata.buc_sumR2){
             log_101.apply();
         }
-        else {
-            if (meta.custom_metadata.buc_sum > meta.custom_metadata.buc_sum ^ meta.custom_metadata.buc_sum >> 1 && meta.custom_metadata.buc_sum < meta.custom_metadata.buc_sum ^ meta.custom_metadata.buc_sum >> 2) {
+        }else {
+            if (meta.custom_metadata.buc_sum < meta.custom_metadata.buc_sumR2) {
                 log_110.apply();
             }
             else {
-                if (meta.custom_metadata.buc_sum > meta.custom_metadata.buc_sum ^ meta.custom_metadata.buc_sum >> 1 && meta.custom_metadata.buc_sum > meta.custom_metadata.buc_sum ^ meta.custom_metadata.buc_sum >> 2) {
                     log_111.apply();
-                }
             }
         }
     }
